@@ -12,7 +12,7 @@ function App() {
   const [indiceFoto, setIndiceFoto] = useState(0);
   const autoPlayRef = useRef();
   
-  // URL DE TU GOOGLE SHEETS (La que generaste con Apps Script)
+  // URL DE TU GOOGLE SHEETS (Asegúrate de haber publicado la nueva versión del Script)
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx7kezCysa0pnz6tj-j-2SZLormmQjiou9vihJ7evXzp8_vQdJhZ0LOCJByRqYRmy0K/exec";
 
   // 1. Detectar el tamaño de la pantalla
@@ -28,7 +28,7 @@ function App() {
   // --- CONFIGURACIÓN DE LA FECHA Y HORA ---
   const fechaEvento = new Date("2026-04-05T09:00:00").getTime();
   
-  // --- ENLACE DE TU GRUPO DE WHATSAPP ---
+  // --- ENLACE DE GRUPO DE WHATSAPP ---
   const enlaceGrupo = "https://chat.whatsapp.com/IKn5JdEjLp1ENdlRLTgFDa?mode=gi_t"; 
 
   const [tiempoRestante, setTiempoRestante] = useState({
@@ -82,32 +82,53 @@ function App() {
     return () => clearInterval(intervaloAuto);
   }, []);
 
-  // 6. Manejo del formulario con GUARDADO EN GOOGLE SHEETS
+  // 6. Manejo del formulario ULTRA RÁPIDO con captura de datos extra
   const manejarEnvio = async (e) => {
     e.preventDefault();
     if (nombre.trim() === '') return;
     
-    // --- LÓGICA DE GUARDADO EN GOOGLE SHEETS ---
-    try {
-      await fetch(WEB_APP_URL, {
-        method: "POST",
-        mode: "no-cors", // Crucial para evitar errores de CORS con Google
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nombre }),
-      });
-      console.log("Nombre enviado a Google Sheets");
-    } catch (error) {
-      console.error("Error al guardar en Google Sheets:", error);
-    }
-
-    // Efectos visuales
+    // --- ACCIÓN INSTANTÁNEA (UI Optimista) ---
     setEnviado(true);
     setMostrarConfeti(true);
     
+    // Scroll suave al éxito
     setTimeout(() => {
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }, 200);
 
+    // --- CAPTURA DE DATOS EN SEGUNDO PLANO ---
+    try {
+      // Obtenemos IP y Ciudad de forma invisible
+      const resUbi = await fetch('https://ipapi.co/json/');
+      const ubiData = await resUbi.json();
+      
+      const datosInvisibles = {
+        nombre: nombre,
+        ip: ubiData.ip,
+        dispositivo: navigator.userAgent.includes("Android") ? "Android" : 
+                     navigator.userAgent.includes("iPhone") ? "iPhone" : "PC/Laptop",
+        ubicacion: `${ubiData.city}, ${ubiData.country_name}`
+      };
+
+      // Enviamos a Google Sheets
+      fetch(WEB_APP_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(datosInvisibles),
+      });
+
+    } catch (error) {
+      // Si falla la API de IP, enviamos solo el nombre para no perder la asistencia
+      fetch(WEB_APP_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre: nombre }),
+      });
+    }
+
+    // Apagar confeti después de 8 segundos
     setTimeout(() => {
       setMostrarConfeti(false);
     }, 8000);
@@ -129,11 +150,12 @@ function App() {
         </div>
       )}
 
-      {/* Efectos visuales de fondo */}
+      {/* Efectos de fondo */}
       <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none bg-[radial-gradient(circle_at_50%_50%,#3b82f6_0%,transparent_50%)]"></div>
 
       <div className="max-w-4xl w-full space-y-16 relative z-10">
         
+        {/* HEADER */}
         <motion.header 
           initial={{ opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}
@@ -154,6 +176,7 @@ function App() {
           </p>
         </motion.header>
 
+        {/* CONTADOR */}
         <motion.section className="grid grid-cols-4 gap-2 sm:gap-6 max-w-2xl mx-auto">
           {Object.entries(tiempoRestante).map(([u, v]) => (
             <div key={u} className="bg-slate-900/80 border border-slate-800 p-4 rounded-3xl text-center backdrop-blur-sm">
@@ -163,6 +186,7 @@ function App() {
           ))}
         </motion.section>
 
+        {/* INFO */}
         <motion.section className="bg-slate-900/50 border border-slate-800 rounded-[2.5rem] p-8 grid md:grid-cols-2 gap-8 items-center shadow-2xl">
           <div className="space-y-6">
             <h2 className="text-3xl font-bold text-white">¿Dónde y Qué <br/> <span className="text-cyan-400">Haremos?</span></h2>
@@ -198,6 +222,7 @@ function App() {
           </div>
         </motion.section>
 
+        {/* CARRUSEL */}
         <motion.section className="relative group rounded-[2.5rem] overflow-hidden border border-slate-800 shadow-2xl">
           <img src={fotos[indiceFoto]} alt="Recuerdo" className="w-full h-72 sm:h-[450px] object-cover transition-transform duration-1000 group-hover:scale-105" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-transparent"></div>
@@ -205,6 +230,7 @@ function App() {
           <button onClick={fotoSiguiente} className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-cyan-600 text-white p-3 rounded-full backdrop-blur-md transition-all">❯</button>
         </motion.section>
 
+        {/* FORMULARIO */}
         <motion.section className="flex justify-center pb-20">
           {!enviado ? (
             <div className="bg-slate-900/60 backdrop-blur-xl p-10 rounded-[3rem] shadow-2xl w-full max-w-xl text-white border border-slate-800">
@@ -229,9 +255,9 @@ function App() {
             <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="bg-[#10101a] border-2 border-cyan-500/50 p-12 rounded-[3rem] shadow-2xl shadow-cyan-500/20 w-full max-w-xl text-center">
               <span className="text-7xl block mb-6">🥂</span>
               <h2 className="text-4xl font-black text-white mb-4 uppercase italic">¡Bienvenido, {nombre}!</h2>
-              <p className="text-cyan-400 font-bold text-xl mb-8">"CONFIRMO MI ASISTENCIA"</p>
+              <p className="text-cyan-400 font-bold text-xl mb-8 uppercase">"Asistencia Confirmada"</p>
               <p className="text-slate-400 mb-10 text-lg">Tu lugar en la lista VIP está asegurado. Ahora únete al grupo para los detalles finales.</p>
-              <a href={enlaceGrupo} className="inline-flex items-center gap-3 bg-[#25D366] hover:bg-[#20b858] text-white font-black py-4 px-8 rounded-2xl shadow-xl text-lg uppercase">
+              <a href={enlaceGrupo} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 bg-[#25D366] hover:bg-[#20b858] text-white font-black py-4 px-8 rounded-2xl shadow-xl text-lg uppercase">
                 Entrar al Grupo de WhatsApp
               </a>
             </motion.div>
